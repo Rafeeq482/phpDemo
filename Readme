@@ -1,0 +1,5 @@
+1.This will read from config.ini.php and generate .env
+    php apps/sample-app/convert-to-env.php
+
+2.To Run code write 
+    php -S localhost:8080

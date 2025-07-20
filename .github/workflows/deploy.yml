@@ -8,29 +8,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
-
-    - name: Set up SSH key
-      uses: webfactory/ssh-agent@v0.8.1
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-    - name: Add bastion host to known_hosts
-      run: ssh-keyscan -H ${{ secrets.BASTION_PUBLIC_IP }} >> ~/.ssh/known_hosts
-
-    - name: Add private app host to known_hosts via bastion
-      run: |
-        ssh -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
-          -i ~/.ssh/id_rsa ubuntu@${{ secrets.APP_PRIVATE_IP }} "ssh-keyscan -H localhost >> ~/.ssh/known_hosts"
-
-    - name: Pull latest code into EC2
-      run: |
-        ssh -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
-          -i ~/.ssh/id_rsa ubuntu@${{ secrets.APP_PRIVATE_IP }} << 'EOF'
-          if [ -d /var/www/html/phpDemo/.git ]; then
-            sudo git -C /var/www/html/phpDemo pull origin main
-          else
-            sudo git clone https://github.com/<your-username>/<your-repo>.git /var/www/html/phpDemo
-          fi
-        EOF
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+    
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    
+      - name: Add Bastion Host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.BASTION_PUBLIC_IP }} >> ~/.ssh/known_hosts || true
+    
+      - name: Add Private Host to known_hosts via Bastion
+        run: |
+          ssh -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
+              -i ~/.ssh/id_rsa ubuntu@${{ secrets.APP_PRIVATE_IP }} "echo Connected via Bastion"
+          ssh-keyscan -H ${{ secrets.APP_PRIVATE_IP }} >> ~/.ssh/known_hosts || true
+    
+      - name: Pull latest code into EC2
+        run: |
+          ssh -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
+              -i ~/.ssh/id_rsa ubuntu@${{ secrets.APP_PRIVATE_IP }} << 'EOF'
+            if [ -d /var/www/html/phpDemo/.git ]; then
+              sudo git -C /var/www/html/phpDemo pull origin main
+            else
+              sudo git clone https://github.com/<your-username>/<your-repo>.git /var/www/html/phpDemo
+            fi
+          EOF

@@ -22,10 +22,14 @@ jobs:
         run: |
           ssh-keyscan -H ${{ secrets.BASTION_HOST }} >> ~/.ssh/known_hosts || true
 
-      - name: SSH into Private EC2 and Pull Repo
+      - name: Pull latest code into EC2
         run: |
-          ssh -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.BASTION_HOST }} -W %h:%p" \
-              -o StrictHostKeyChecking=no \
-              -o UserKnownHostsFile=/dev/null \
-              ubuntu@${{ secrets.PRIVATE_HOST }} \
-              'cd /var/www/html/phpDemo && git pull origin main || (rm -rf /var/www/html/phpDemo && git clone https://github.com/<your-username>/<your-repo>.git /var/www/html/phpDemo)'
+          ssh -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
+              -i ~/.ssh/id_rsa ubuntu@${{ secrets.APP_PRIVATE_IP }} << 'EOF'
+            if [ -d /var/www/html/phpDemo/.git ]; then
+              sudo git -C /var/www/html/phpDemo pull origin main
+            else
+              sudo rm -rf /var/www/html/phpDemo
+              sudo git clone https://github.com/<your-username>/<your-repo>.git /var/www/html/phpDemo
+            fi
+          EOF

@@ -86,7 +86,7 @@ echo "
         <div class='info'><span class='label'>App Version:</span> <span class='value'>{$env['APP_VERSION']}</span></div>
         <div class='info'><span class='label'>Maintainer:</span> <span class='value'>{$env['MAINTAINER']}</span></div>
         <div class='info'><span class='label'>Debug Mode:</span> <span class='value'>" . ($env['DEBUG_MODE'] === 'true' ? '<span class="badge">Enabled</span>' : '<span class="badge" style="background:#ffebee;color:#c62828;">Disabled</span>') . "</span></div>
-        <div class='info'><span class='label'>SourcesSUCK:</span> <span class='value'>Loaded from .env file</span></div>
+        <div class='info'><span class='label'>Source_Yeahhh_baby_ItWorks:</span> <span class='value'>Loaded from .env file</span></div>
     </div>
 </body>
 </html>

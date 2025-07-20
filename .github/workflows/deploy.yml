@@ -11,26 +11,23 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
     
-      - name: Set up SSH key
+      - name: Start SSH Agent and Add Key
         uses: webfactory/ssh-agent@v0.5.4
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-    
-      - name: Add Bastion Host to known_hosts
+
+      - name: Add Bastion to known_hosts
+        run: ssh-keyscan -H ${{ secrets.BASTION_PUBLIC_IP }} >> ~/.ssh/known_hosts
+      
+      - name: Add Private EC2 to known_hosts via Bastion
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.BASTION_PUBLIC_IP }} >> ~/.ssh/known_hosts || true
-    
-      - name: Add Private Host to known_hosts via Bastion
+          ssh -o ProxyCommand="ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
+              ubuntu@${{ secrets.APP_PRIVATE_IP }} "echo Host verified" || true
+      
+      - name: Pull latest code into EC2 via Bastion
         run: |
-          ssh -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
-              -i ~/.ssh/id_rsa ubuntu@${{ secrets.APP_PRIVATE_IP }} "echo Connected via Bastion"
-          ssh-keyscan -H ${{ secrets.APP_PRIVATE_IP }} >> ~/.ssh/known_hosts || true
-    
-      - name: Pull latest code into EC2
-        run: |
-          ssh -o ProxyCommand="ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
-              -i ~/.ssh/id_rsa ubuntu@${{ secrets.APP_PRIVATE_IP }} << 'EOF'
+          ssh -o ProxyCommand="ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
+              ubuntu@${{ secrets.APP_PRIVATE_IP }} << 'EOF'
             if [ -d /var/www/html/phpDemo/.git ]; then
               sudo git -C /var/www/html/phpDemo pull origin main
             else

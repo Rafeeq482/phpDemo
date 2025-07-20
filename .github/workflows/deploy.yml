@@ -33,6 +33,6 @@ jobs:
           if [ -d /var/www/html/phpDemo/.git ]; then
             sudo git -C /var/www/html/phpDemo pull origin main
           else
-            sudo git clone https://github.com/Rafeeq482/phpDemo.git /var/www/html/phpDemo
+            sudo git clone $REPO_URL /var/www/html/phpDemo
           fi
         EOF

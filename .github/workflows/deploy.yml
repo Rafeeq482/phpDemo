@@ -10,36 +10,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Setup Bastion PEM Key
+    - name: Setup SSH Keys
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.BASTION_KEY }}" > ~/.ssh/bastion.pem
-        chmod 400 ~/.ssh/bastion.pem
-
-    - name: Setup Private EC2 PEM Key
-      run: |
         echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/private.pem
-        chmod 400 ~/.ssh/private.pem
+        chmod 400 ~/.ssh/*.pem
 
     - name: Add SSH Config
       run: |
-        echo "
-        Host bastion
+        echo "Host bastion
           HostName ${{ secrets.BASTION_IP }}
           User ${{ secrets.USER }}
           IdentityFile ~/.ssh/bastion.pem
+          StrictHostKeyChecking no
+          UserKnownHostsFile=/dev/null
 
         Host private-ec2
           HostName ${{ secrets.PRIVATE_IP }}
           User ${{ secrets.USER }}
           IdentityFile ~/.ssh/private.pem
           ProxyJump bastion
+          StrictHostKeyChecking no
+          UserKnownHostsFile=/dev/null
         " > ~/.ssh/config
-        chmod 600 ~/.ssh/config
+                chmod 600 ~/.ssh/config
 
     - name: Deploy Code on Private EC2 via Bastion
       run: |
-        ssh -o StrictHostKeyChecking=no private-ec2 "
+        ssh private-ec2 "
           cd /var/www/html/phpDemo &&
           sudo git pull origin main
         "

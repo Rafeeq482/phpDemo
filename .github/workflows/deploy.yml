@@ -1,4 +1,4 @@
-name: Deploy via Bastion
+name: SSH via Bastion to Private EC2
 
 on:
   push:
@@ -6,33 +6,37 @@ on:
       - main
 
 jobs:
-  deploy:
+  ssh:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Set up SSH Agent
-      uses: webfactory/ssh-agent@v0.5.4
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-    - name: Add Bastion and App instance to known_hosts
+    - name: Setup Bastion PEM Key
       run: |
         mkdir -p ~/.ssh
-        ssh-keyscan -H ${{ secrets.BASTION_PUBLIC_IP }} >> ~/.ssh/known_hosts
-        ssh -o StrictHostKeyChecking=no \
-            -o ProxyCommand="ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
-            ubuntu@${{ secrets.APP_PRIVATE_IP }} "exit" || true
+        echo "${{ secrets.BASTION_KEY }}" > ~/.ssh/bastion.pem
+        chmod 400 ~/.ssh/bastion.pem
 
-    - name: Pull latest code on app server via Bastion
+    - name: Setup Private EC2 PEM Key
       run: |
-        ssh -o ProxyCommand="ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_PUBLIC_IP }} -W %h:%p" \
-            ubuntu@${{ secrets.APP_PRIVATE_IP }} << 'EOF'
-          if [ -d /var/www/html/phpDemo/.git ]; then
-            sudo git -C /var/www/html/phpDemo pull origin main
-          else
-            sudo git clone $REPO_URL /var/www/html/phpDemo
-          fi
-        EOF
+        echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/private.pem
+        chmod 400 ~/.ssh/private.pem
+
+    - name: Add SSH Config
+      run: |
+        echo "
+        Host bastion
+          HostName ${{ secrets.BASTION_IP }}
+          User ${{ secrets.USER }}
+          IdentityFile ~/.ssh/bastion.pem
+
+        Host private-ec2
+          HostName ${{ secrets.PRIVATE_IP }}
+          User ${{ secrets.USER }}
+          IdentityFile ~/.ssh/private.pem
+          ProxyJump bastion
+        " > ~/.ssh/config
+        chmod 600 ~/.ssh/config
+
+    - name: Test SSH to Private EC2 via Bastion
+      run: |
+        ssh -o StrictHostKeyChecking=no private-ec2 "hostname && whoami && uptime"

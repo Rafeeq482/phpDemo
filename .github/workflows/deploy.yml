@@ -26,19 +26,34 @@ jobs:
           StrictHostKeyChecking no
           UserKnownHostsFile=/dev/null
 
-        Host private-ec2
-          HostName ${{ secrets.PRIVATE_IP }}
+        Host private-ec2-app1
+          HostName ${{ secrets.PRIVATE_IP_APP1 }}
+          User ${{ secrets.USER }}
+          IdentityFile ~/.ssh/private.pem
+          ProxyJump bastion
+          StrictHostKeyChecking no
+          UserKnownHostsFile=/dev/null
+
+        Host private-ec2-app2
+          HostName ${{ secrets.PRIVATE_IP_APP2 }}
           User ${{ secrets.USER }}
           IdentityFile ~/.ssh/private.pem
           ProxyJump bastion
           StrictHostKeyChecking no
           UserKnownHostsFile=/dev/null
         " > ~/.ssh/config
-                chmod 600 ~/.ssh/config
+        chmod 600 ~/.ssh/config
 
-    - name: Deploy Code on Private EC2 via Bastion
+    - name: Deploy Code on app1 via Bastion
       run: |
-        ssh private-ec2 "
+        ssh private-ec2-app1 "
+          cd /var/www/html/phpDemo &&
+          sudo git pull origin main
+        "
+
+    - name: Deploy Code on app2 via Bastion
+      run: |
+        ssh private-ec2-app2 "
           cd /var/www/html/phpDemo &&
           sudo git pull origin main
         "
